@@ -1,7 +1,6 @@
 from flask import Flask, request, jsonify
 from flask_cors import CORS
-from parsers import TopDownParser
-from parsers.bottom_up import BottomUpParser  # Import BottomUpParser
+from parsers import TopDownParser, BottomUpParser, TopDownBtParser
 
 app = Flask(__name__)
 CORS(app)
@@ -27,12 +26,14 @@ def parse():
     grammar = parse_grammar(data['grammar'])
     algorithm = data['algorithm']
 
-    if algorithm == "top-down":
-        parser = TopDownParser(grammar)
-        success, steps = parser.parse(sentence)
-        return jsonify({"success": success, "steps": steps})
-    elif algorithm == "bottom-up":
-        parser = BottomUpParser(grammar)
+    parsers = {
+        "top-down": TopDownParser,
+        "bottom-up": BottomUpParser,
+        "top-down-backtracking": TopDownBtParser
+    }
+
+    if algorithm in parsers:
+        parser = parsers[algorithm](grammar)
         success, steps = parser.parse(sentence)
         return jsonify({"success": success, "steps": steps})
     else:
@@ -40,5 +41,3 @@ def parse():
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=8001, debug=True)
-    # print(parse_grammar("s --> np,vp\nnp --> det,n\ndet --> [the]\nn --> [man]\nn --> [dog]\nvp --> tv,np\ntv --> [hit]"))
-    # print(parse_grammar("s --> [a],s,[b]\ns --> [a],[b]"))
