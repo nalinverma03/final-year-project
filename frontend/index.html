@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Grammar Parser Visualizer</title>
+    <link rel="stylesheet" href="style.css">
+    <script src="https://d3js.org/d3.v7.min.js"></script>
+</head>
+<body>
+    <div class="container">
+        <h1>Grammar Parser Visualizer</h1>
+        
+        <!-- Input Section -->
+        <div class="input-section">
+            <textarea id="sentence" placeholder="Enter your sentence..."></textarea>
+            <textarea id="grammar" placeholder="Enter grammar rules (e.g., S → NP VP)..."></textarea>
+            <select id="algorithm">
+                <option value="bottom-up">Bottom-Up</option>
+                <option value="top-down">Top-Down</option>
+            </select>
+            <button onclick="runParser()">Parse</button>
+        </div>
+
+        <!-- Visualization Area -->
+        <div id="visualization">
+            <svg id="parse-tree"></svg>
+            <div id="stack-state"></div>
+            <div id="backtrack-log"></div>
+        </div>
+
+        <!-- Control Buttons -->
+        <div class="control-buttons">
+            <button id="prev-step" onclick="prevStep()">Previous Step</button>
+            <span id="current-step">Step: 0</span>
+            <button id="next-step" onclick="nextStep()">Next Step</button>
+        </div>
+    </div>
+    <script src="main.js"></script>
+</body>
+</html>
