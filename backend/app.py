@@ -1,6 +1,6 @@
 from flask import Flask, request, jsonify
 from flask_cors import CORS
-from parsers import TopDownParser, BottomUpParser, TopDownBtParser
+from parsers import TopDownParser, BottomUpParser, TopDownBtParser, BottomUpBtParser
 
 app = Flask(__name__)
 CORS(app)
@@ -29,7 +29,8 @@ def parse():
     parsers = {
         "top-down": TopDownParser,
         "bottom-up": BottomUpParser,
-        "top-down-backtracking": TopDownBtParser
+        "top-down-backtracking": TopDownBtParser,
+        "bottom-up-backtracking": BottomUpBtParser
     }
 
     if algorithm in parsers:
