@@ -5,12 +5,18 @@ async function runParser() {
     const sentence = document.getElementById('sentence').value;
     const grammar = document.getElementById('grammar').value;
     const algorithm = document.getElementById('algorithm').value;
+    const backtracking = document.getElementById('backtracking').checked;
+    currentAlgorithm = backtracking ? `${algorithm}-backtracking` : algorithm;
 
     try {
         const response = await fetch('http://0.0.0.0:8001/parse', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ sentence, grammar, algorithm }),
+            body: JSON.stringify({ 
+                sentence, 
+                grammar, 
+                algorithm: currentAlgorithm
+            }),
             mode: 'cors'
         });
 
@@ -53,15 +59,18 @@ function buildTree(steps, currentStepIndex) {
         if (!node) break;
 
         if (step.action === "expand") {
-            node.children = step.rule.map(symbol => ({
+            node.name = step.rule[0];
+            node.children = step.rule[1].map(symbol => ({
                 name: symbol,
                 children: [],
                 isTerminal: false
             }));
         } else if (step.action === "leaf") {
-            node.name = step.rule[0];
-            node.isTerminal = true;
-            node.children = [];
+            node.children = [{
+                name: step.rule[1][0].slice(1, -1),
+                children: [],
+                isTerminal: true
+            }];
         }
     }
 

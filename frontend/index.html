@@ -14,9 +14,12 @@
             <textarea id="sentence" placeholder="Enter your sentence..."></textarea>
             <textarea id="grammar" placeholder="Enter grammar rules (e.g., S → NP VP)..."></textarea>
             <select id="algorithm">
-                <option value="bottom-up">Bottom-Up</option>
                 <option value="top-down">Top-Down</option>
+                <option value="bottom-up">Bottom-Up</option>
             </select>
+            <label>
+                <input type="checkbox" id="backtracking"> Enable Backtracking
+            </label>
             <button onclick="runParser()">Parse</button>
         </div>
 
