@@ -1,11 +1,14 @@
 let currentStepIndex = 0;
 let steps = [];
+let currentSentence = "";
+let currentAlgorithm = "";
 
 async function runParser() {
     const sentence = document.getElementById('sentence').value;
     const grammar = document.getElementById('grammar').value;
     const algorithm = document.getElementById('algorithm').value;
     const backtracking = document.getElementById('backtracking').checked;
+    currentSentence = sentence;
     currentAlgorithm = backtracking ? `${algorithm}-backtracking` : algorithm;
 
     try {
@@ -52,34 +55,54 @@ function visualizeStep(index) {
 }
 
 function buildTree(steps, currentStepIndex) {
-    let root = { name: "s", children: [], isTerminal: false };
-    // If treeIndex is -1, show only the initial root node.
-    if (currentStepIndex === -1) return root;
-
-    for (let i = 0; i <= currentStepIndex; i++) {
-        const step = steps[i];
-        if (!step) break;
-
-        const node = findLeftmostUnexpandedNonTerminal(root);
-        if (!node) break;
-
-        if (step.action === "expand") {
-            node.name = step.rule[0];
-            node.children = step.rule[1].map(symbol => ({
-                name: symbol,
-                children: [],
-                isTerminal: false
-            }));
-        } else if (step.action === "leaf") {
-            node.children = [{
-                name: step.rule[1][0].slice(1, -1),
-                children: [],
-                isTerminal: true
-            }];
+    if (currentAlgorithm.startsWith("bottom-up")) {
+        let stack = [];
+        if (currentStepIndex === -1) return stack;
+        const words = currentSentence.split(" ");
+        for (let i = 0; i <= currentStepIndex; i++) {
+            const step = steps[i];
+            if (!step) break;
+            if (step.action === "shift") {
+                const word = words[step.input_index];
+                stack.push({ name: word, children: [], isTerminal: true });
+            } else if (step.action === "reduce") {
+                const count = step.rule[1].length;
+                if (stack.length < count) break; // error: not enough nodes to reduce
+                let children = stack.splice(stack.length - count, count);
+                // Connect the children (rightmost unexpanded nodes) to the new node.
+                stack.push({ name: step.rule[0], children: children, isTerminal: false });
+            }
+            // ...additional bottom-up actions can be handled here...
         }
-    }
+        return stack;
+    } else {
+        let root = { name: "s", children: [], isTerminal: false };
+        if (currentStepIndex === -1) return root;
 
-    return root;
+        for (let i = 0; i <= currentStepIndex; i++) {
+            const step = steps[i];
+            if (!step) break;
+
+            const node = findLeftmostUnexpandedNonTerminal(root);
+            if (!node) break;
+
+            if (step.action === "expand") {
+                node.name = step.rule[0];
+                node.children = step.rule[1].map(symbol => ({
+                    name: symbol,
+                    children: [],
+                    isTerminal: false
+                }));
+            } else if (step.action === "leaf") {
+                node.children = [{
+                    name: step.rule[1][0].slice(1, -1),
+                    children: [],
+                    isTerminal: true
+                }];
+            }
+        }
+        return root;
+    }
 }
 
 function findLeftmostUnexpandedNonTerminal(node) {
@@ -92,48 +115,116 @@ function findLeftmostUnexpandedNonTerminal(node) {
 }
 
 function drawTree(data) {
-    const width = 600;
-    const height = 400;
-    const svg = d3.select("#parse-tree")
-        .html("")
-        .attr("width", width)
-        .attr("height", height)
-        .attr("viewBox", [0, 0, width, height]);
+    if (currentAlgorithm.startsWith("bottom-up")) {
+        const width = 600;
+        const height = 400;
+        const svg = d3.select("#parse-tree")
+            .html("")
+            .attr("width", width)
+            .attr("height", height);
+        // Arrange top-level nodes horizontally.
+        const gap = width / (data.length + 1);
+        data.forEach((node, i) => {
+            const offsetX = (i + 1) * gap;
+            // If the node has children (from a reduce), render its subtree using d3.tree.
+            if (node.children && node.children.length > 0) {
+                // Create a local tree layout for this subtree.
+                const localWidth = 100, localHeight = 100;
+                const treeLayout = d3.tree().size([localWidth, localHeight]);
+                const rootD3 = d3.hierarchy(node);
+                treeLayout(rootD3);
+                // Shift the subtree so that its root is positioned at (offsetX, height/4)
+                const dx = offsetX - rootD3.x;
+                const dy = (height / 4) - rootD3.y;
+                // Draw links connecting the reduced node to its children.
+                const linkGenerator = d3.linkVertical()
+                    .x(d => d.x + dx)
+                    .y(d => d.y + dy);
+                svg.selectAll(".link" + i)
+                    .data(rootD3.links())
+                    .join("path")
+                    .attr("class", "link" + i)
+                    .attr("d", linkGenerator)
+                    .attr("fill", "none")
+                    .attr("stroke", "#555");
+                // Draw nodes for this subtree.
+                svg.selectAll(".node" + i)
+                    .data(rootD3.descendants())
+                    .join("g")
+                    .attr("class", "node" + i)
+                    .attr("transform", d => `translate(${d.x + dx}, ${d.y + dy})`)
+                    .each(function(d) {
+                        const g = d3.select(this);
+                        g.append("circle")
+                            .attr("r", 10)
+                            .attr("fill", "#fff")
+                            .attr("stroke", "#555");
+                        g.append("text")
+                            .attr("dy", "0.31em")
+                            .attr("text-anchor", "middle")
+                            .text(d.data.name);
+                    });
+            } else {
+                // For plain shift nodes, simply render them without any connecting links.
+                svg.append("g")
+                    .attr("class", "node" + i)
+                    .attr("transform", `translate(${offsetX}, ${height/2})`)
+                    .call(g => {
+                        g.append("circle")
+                            .attr("r", 10)
+                            .attr("fill", "#fff")
+                            .attr("stroke", "#555");
+                        g.append("text")
+                            .attr("dy", "0.31em")
+                            .attr("text-anchor", "middle")
+                            .text(node.name);
+                    });
+            }
+        });
+    } else {
+        const width = 600;
+        const height = 400;
+        const svg = d3.select("#parse-tree")
+            .html("")
+            .attr("width", width)
+            .attr("height", height)
+            .attr("viewBox", [0, 0, width, height]);
 
-    const treeLayout = d3.tree().size([width, height - 100]);
-    const rootNode = d3.hierarchy(data);
-    treeLayout(rootNode);
+        const treeLayout = d3.tree().size([width, height - 100]);
+        const rootNode = d3.hierarchy(data);
+        treeLayout(rootNode);
 
-    // Draw links
-    const linkGenerator = d3.linkVertical()
-        .x(d => d.x)
-        .y(d => d.y);
+        // Draw links
+        const linkGenerator = d3.linkVertical()
+            .x(d => d.x)
+            .y(d => d.y);
 
-    svg.selectAll(".link")
-        .data(rootNode.links())
-        .join("path")
-        .attr("class", "link")
-        .attr("d", linkGenerator)
-        .attr("fill", "none")
-        .attr("stroke", "#555");
+        svg.selectAll(".link")
+            .data(rootNode.links())
+            .join("path")
+            .attr("class", "link")
+            .attr("d", linkGenerator)
+            .attr("fill", "none")
+            .attr("stroke", "#555");
 
-    // Draw nodes
-    const nodes = svg.selectAll(".node")
-        .data(rootNode.descendants())
-        .join("g")
-        .attr("class", "node")
-        .attr("transform", d => `translate(${d.x},${d.y})`);
+        // Draw nodes
+        const nodes = svg.selectAll(".node")
+            .data(rootNode.descendants())
+            .join("g")
+            .attr("class", "node")
+            .attr("transform", d => `translate(${d.x},${d.y})`);
 
-    nodes.append("circle")
-        .attr("r", 10)
-        .attr("fill", "#fff")
-        .attr("stroke", "#555");
+        nodes.append("circle")
+            .attr("r", 10)
+            .attr("fill", "#fff")
+            .attr("stroke", "#555");
 
-    nodes.append("text")
-        .attr("dy", "0.31em")
-        .attr("x", d => d.children ? -15 : 15)
-        .attr("text-anchor", d => d.children ? "end" : "start")
-        .text(d => d.data.name);
+        nodes.append("text")
+            .attr("dy", "0.31em")
+            .attr("x", d => d.children ? -15 : 15)
+            .attr("text-anchor", d => d.children ? "end" : "start")
+            .text(d => d.data.name);
+    }
 }
 
 function nextStep() {
