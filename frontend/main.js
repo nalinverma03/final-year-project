@@ -42,7 +42,10 @@ function visualizeSteps(steps) {
 }
 
 function visualizeStep(index) {
-    const treeData = buildTree(steps, index);
+    // Set treeIndex to -1 when index is 0 so that only "s" is shown,
+    // otherwise, use the previous step (index - 1)
+    const treeIndex = index === 0 ? -1 : index - 1;
+    const treeData = buildTree(steps, treeIndex);
     drawTree(treeData);
     document.getElementById('current-step').textContent = `Step: ${index + 1}`;
     d3.selectAll(".stack-step").classed("current", (d, i) => i === index);
@@ -50,6 +53,8 @@ function visualizeStep(index) {
 
 function buildTree(steps, currentStepIndex) {
     let root = { name: "s", children: [], isTerminal: false };
+    // If treeIndex is -1, show only the initial root node.
+    if (currentStepIndex === -1) return root;
 
     for (let i = 0; i <= currentStepIndex; i++) {
         const step = steps[i];
